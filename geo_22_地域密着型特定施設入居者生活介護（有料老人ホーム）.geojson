@@ -1,0 +1,14 @@
+{
+"type": "FeatureCollection",
+"name": "geo_22_地域密着型特定施設入居者生活介護（有料老人ホーム）",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "内容": "有料老人ホーム　まはえ【地域密着型特定施設入居者生活介護（有料老人ホーム）】静岡市葵区山崎2丁目2-8", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2294200957-00&ServiceCd=361&Type=search", "url2": "http://www.mahae-shizuoka.jp/" }, "geometry": { "type": "Point", "coordinates": [ 138.355253700000048, 34.9771479 ] } },
+{ "type": "Feature", "properties": { "内容": "カイゴツキユウリョウロウジンホーム　ケアホームキジュアン【地域密着型特定施設入居者生活介護（有料老人ホーム）】静岡県静岡市葵区瀬名7丁目24-25", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2294202540-00&ServiceCd=361&Type=search", "url2": "http://r.goope.jp/kijyuannishina" }, "geometry": { "type": "Point", "coordinates": [ 138.426668400000011, 35.0344818 ] } },
+{ "type": "Feature", "properties": { "内容": "介護付き有料老人ホームフォレスト高松【地域密着型特定施設入居者生活介護（有料老人ホーム）】静岡市駿河区敷地1-10-9フォレスト高松", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2294201344-00&ServiceCd=361&Type=search", "url2": "msc-care.co.jp/" }, "geometry": { "type": "Point", "coordinates": [ 138.409369, 34.952254 ] } },
+{ "type": "Feature", "properties": { "内容": "ケアセンターオアシス入江【地域密着型特定施設入居者生活介護（有料老人ホーム）】静岡県静岡市清水区入江３－４－２４", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2294200478-00&ServiceCd=361&Type=search", "url2": "oasis-shizuoka.com/" }, "geometry": { "type": "Point", "coordinates": [ 138.47743689999993, 35.0173819 ] } },
+{ "type": "Feature", "properties": { "内容": "介護付有料老人ホーム　ふるーら西久保【地域密着型特定施設入居者生活介護（有料老人ホーム）】静岡県静岡市清水区西久保1-2-13", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2294202953-00&ServiceCd=361&Type=search", "url2": "www.earth-group.co.jp" }, "geometry": { "type": "Point", "coordinates": [ 138.482055441104535, 35.033038750637083 ] } },
+{ "type": "Feature", "properties": { "内容": "地域密着型施設おあぞらライフ大蒲【地域密着型特定施設入居者生活介護（有料老人ホーム）】静岡県浜松市中央区大蒲町74-6", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2297100196-00&ServiceCd=361&Type=search", "url2": "http://www.ishigakinaika.jp/" }, "geometry": { "type": "Point", "coordinates": [ 137.763265, 34.7150795 ] } },
+{ "type": "Feature", "properties": { "内容": "地域密着型施設あおぞら中ノ町【地域密着型特定施設入居者生活介護（有料老人ホーム）】浜松市東区中野町1217番地", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2297100279-00&ServiceCd=361&Type=search", "url2": "https://www.ishigakinaika.jp/" }, "geometry": { "type": "Point", "coordinates": [ 137.796186199999966, 34.7285299 ] } }
+]
+}

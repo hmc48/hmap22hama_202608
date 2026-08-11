@@ -1,0 +1,12 @@
+{
+"type": "FeatureCollection",
+"name": "geo_22_短期入所療養介護（介護医療院）",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "内容": "医療法人社団和恵会　湖東ケアセンター【短期入所療養介護（介護医療院）】浜松市西区伊左地町8151", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=22B7200033-00&ServiceCd=551&Type=search", "url2": "http://www.kotou-wakeikai.com" }, "geometry": { "type": "Point", "coordinates": [ 137.6548602, 34.7465826 ] } },
+{ "type": "Feature", "properties": { "内容": "介護医療院　西山病院【短期入所療養介護（介護医療院）】静岡県浜松市西区西山町500", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=22B7200090-00&ServiceCd=551&Type=search", "url2": "https://www.nishiyama.or.jp" }, "geometry": { "type": "Point", "coordinates": [ 137.687860300000011, 34.7372125 ] } },
+{ "type": "Feature", "properties": { "内容": "介護医療院　有玉病院【短期入所療養介護（介護医療院）】静岡県浜松市中央区有玉南町1436番地", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=22B7200116-00&ServiceCd=551&Type=search", "url2": "http://www.okazakikai.or.jp/" }, "geometry": { "type": "Point", "coordinates": [ 137.7535626, 34.7524622 ] } },
+{ "type": "Feature", "properties": { "内容": "介護医療院　湖東病院【短期入所療養介護（介護医療院）】浜松市西区伊佐地町8151", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=22B7200074-00&ServiceCd=551&Type=search", "url2": "http://www.kotou-wakeiaki.com" }, "geometry": { "type": "Point", "coordinates": [ 137.6548602, 34.7465826 ] } },
+{ "type": "Feature", "properties": { "内容": "医療法人社団誠心会介護医療院浜北さくら台【短期入所療養介護（介護医療院）】静岡県浜松市浜北区四大地9－68", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=22B7200058-00&ServiceCd=551&Type=search", "url2": "https://www.sakuradai.or.jp/" }, "geometry": { "type": "Point", "coordinates": [ 137.7596754, 34.838175 ] } }
+]
+}

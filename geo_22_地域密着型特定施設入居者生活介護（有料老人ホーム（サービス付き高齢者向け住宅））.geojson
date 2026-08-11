@@ -1,0 +1,11 @@
+{
+"type": "FeatureCollection",
+"name": "geo_22_地域密着型特定施設入居者生活介護（有料老人ホーム（サービス付き高齢者向け住宅））",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "内容": "つどいのおか介護付き有料老人ホーム【地域密着型特定施設入居者生活介護（有料老人ホーム（サービス付き高齢者向け住宅））】駒形通４丁目９－２０", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2294201500-00&ServiceCd=&Type=search", "url2": "https://eishinkai.tsudoinooka.com/about/" }, "geometry": { "type": "Point", "coordinates": [ 138.374871699999971, 34.9663436 ] } },
+{ "type": "Feature", "properties": { "内容": "有料老人ホーム　ペリデアネックス【地域密着型特定施設入居者生活介護（有料老人ホーム（サービス付き高齢者向け住宅））】寺田201-1", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2294201591-00&ServiceCd=&Type=search", "url2": "http://www.pelide.jp" }, "geometry": { "type": "Point", "coordinates": [ 138.357737899999989, 34.9390747 ] } },
+{ "type": "Feature", "properties": { "内容": "坂の上ガーデン幸【地域密着型特定施設入居者生活介護（有料老人ホーム（サービス付き高齢者向け住宅））】静岡県浜松市中央区幸４丁目３６－１", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2297200616-00&ServiceCd=&Type=search", "url2": "http:/www.sakanoue-fc.jp" }, "geometry": { "type": "Point", "coordinates": [ 137.732051803041031, 34.745849018841859 ] } },
+{ "type": "Feature", "properties": { "内容": "櫻乃苑　浜松天竜【地域密着型特定施設入居者生活介護（有料老人ホーム（サービス付き高齢者向け住宅））】二俣町二俣56番1", "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2297200517-00&ServiceCd=&Type=search", "url2": "http://www.sakuranosono.jp/" }, "geometry": { "type": "Point", "coordinates": [ 137.81679280000003, 34.8595592 ] } }
+]
+}
