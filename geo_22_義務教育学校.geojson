@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "geo_22_義務教育学校",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::6668" } },
+"features": [
+{ "type": "Feature", "properties": { "P29_001": "22222", "P29_002": "C222210000010", "P29_003": "16014", "P29_004": "伊豆市立土肥小中一貫校", "P29_005": "静岡県伊豆市土肥2701-1", "P29_006": "3", "P29_007": "1", "P29_008": "00", "P29_009": null }, "geometry": { "type": "Point", "coordinates": [ 138.795572366707773, 34.90823971574028 ] } }
+]
+}
