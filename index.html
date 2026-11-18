@@ -13,8 +13,10 @@
 <meta charset="utf-8">
 <title>医療・介護施設マップ</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- セキュリティ対策：不要な外部接続を制限。既存のインラインJavaScript／onclickを維持するため unsafe-inline は残しています。 -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https://unpkg.com https://*.gsi.go.jp https://*.openstreetmap.org https://hmc48.github.io; connect-src 'self' https://unpkg.com https://*.gsi.go.jp https://*.openstreetmap.org https://router.project-osrm.org https://nominatim.openstreetmap.org https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css">
+<link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.css">
 <style>
 body { margin:0; padding:0; overflow:hidden; font-family: sans-serif; }
 #map { height:100vh; width:100vw; z-index:1; }
@@ -275,6 +277,25 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
   background:#dc3545; color:white; border:0; border-radius:5px; cursor:pointer;
   font-size:14px;
 }
+
+.print-index-number {
+   background: transparent;
+   border: none;
+   color: #c00000;
+   font-weight: bold;
+   font-size: 20px;
+   text-align: center;
+   line-height: 34px;
+ }
+ .print-index-number span {
+   display: inline-block;
+   min-width: 26px;
+   padding: 0 3px;
+   background: rgba(255,255,255,.88);
+   border: 1px solid #c00000;
+   border-radius: 3px;
+   box-sizing: border-box;
+ }
 .print-help { font-size:11px; color:#555; line-height:1.45; margin-top:6px; }
 @media print {
   @page A4Landscape { size: A4 landscape; margin: 0; }
@@ -303,7 +324,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 </style>
 </head>
 <body>
-  <div id="map-title-bar"><span id="main-title">浜松市版</span> <span id="credit-title">© OpenStreetMap</span></div>
+  <div id="map-title-bar"><span id="main-title">静岡県版</span> <span id="credit-title">© OpenStreetMap</span></div>
   <div id="zoom-indicator">Zoom: --</div>
 
   <div id="hazard-legend">
@@ -471,21 +492,21 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
   
   <div id="route-btn" class="circle-btn right-tool" title="経路検索" onclick="toggleRouteMode()">🚗</div>
   <div id="reload-btn" class="circle-btn right-tool" title="初期化" onclick="confirmReload()">↩️</div>
-  <div id="print-map-btn" class="circle-btn right-tool" title="防災マップ印刷" onclick="togglePrintPanel()">🖨️</div>
+  <div id="print-map-btn" class="circle-btn right-tool" title="マップ印刷" onclick="togglePrintPanel()">🖨️</div>
   <div id="print-panel">
     <span class="close-x" onclick="togglePrintPanel()">×</span>
-    <div class="section-title">防災マップ印刷</div>
+    <div class="section-title">マップ印刷</div>
     <div style="margin-top:8px;">用紙サイズ</div>
     <select id="print-paper-size">
       <option value="A4" selected>A4</option>
       <option value="A3">A3</option>
     </select>
-    <div style="margin-top:8px;">分割数</div>
-    <select id="print-grid-size">
-      <option value="2x2">2×2（4枚）</option>
-      <option value="3x3" selected>3×3（9枚）</option>
-      <option value="4x4">4×4（16枚）</option>
-    </select>
+    <div style="margin-top:8px;">分割数（縦・横それぞれ1～30）</div>
+    <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
+      <label style="flex:1;">縦（行）<input type="number" id="print-grid-rows" value="3" min="1" max="30" step="1" style="width:100%;box-sizing:border-box;padding:7px;"></label>
+      <label style="flex:1;">横（列）<input type="number" id="print-grid-cols" value="3" min="1" max="30" step="1" style="width:100%;box-sizing:border-box;padding:7px;"></label>
+    </div>
+    <div id="print-grid-count" style="margin-top:5px; font-weight:bold;">合計：9枚</div>
     <div style="margin-top:8px;">用紙方向</div>
     <select id="print-orientation">
       <option value="landscape" selected>横</option>
@@ -495,7 +516,9 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     <button onclick="createPosterPrint()" style="background:#0d6efd;color:white;border:0;">② 分割印刷ページを作成</button>
     <div class="print-help">
       現在の地図範囲を基準に、選択した用紙サイズのページへ分割します。<br>
-      先に地図を移動・拡大縮小して、印刷したい範囲を表示してください。<br>      「②」を押すと選択した枚数の印刷ページが表示されます。
+      地図を移動・拡大縮小して、印刷したい範囲を調整してください。<br>
+      「②」を押すと入力した縦×横の枚数分、印刷プレビューが表示されます。<br>
+      表示後、各ブラウザの印刷機能でPDF化や紙に印刷します。
     </div>
   </div>
   <div id="print-grid-overlay"></div>
@@ -553,14 +576,13 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     <span style="background-color: #fd63db; border-radius: 50%; padding: 10px; display: inline-flex; align-items: center; justify-content: center; width: 5px; height: 5px;">🏠</span> ホーム<br>
     <span style="background-color: blue; border-radius: 50%; padding: 10px; display: inline-flex; align-items: center; justify-content: center; width: 5px; height: 5px;">🛠️</span> 設定 地図種類変更、医療圏境界線表示<br>
       施設選択（各ページへリンク）<br>
-      人口表示（境界線初期表示時）<br>
     <span style="background-color: green; border-radius: 50%; padding: 10px; display: inline-flex; align-items: center; justify-content: center; width: 5px; height: 5px;">🔍</span> 検索機能(and検索)<br>
       and検索の例:内科 秋葉原 診療所<br>
       人口表示（境界線表示時）<br>
     <span style="background-color: orange; border-radius: 50%; padding: 10px; display: inline-flex; align-items: center; justify-content: center; width: 5px; height: 5px;">📍</span> 住所検索(and検索)<br>
     <span style="background-color: blue; border-radius: 50%; padding: 10px; display: inline-flex; align-items: center; justify-content: center; width: 5px; height: 5px;">🚗</span> 経路探索（自動車、徒歩）<br>
     <span style="background-color: gray; border-radius: 50%; padding: 10px; display: inline-flex; align-items: center; justify-content: center; width: 5px; height: 5px;">↩️</span> 初期化<br>
-    <span style="background-color: gray; border-radius: 50%; padding: 10px; display: inline-flex; align-items: center; justify-content: center; width: 5px; height: 5px;">🖨️</span> 防災マップ印刷（分割印刷A4/A3 Max 4×4（16枚））<br> 
+    <span style="background-color: gray; border-radius: 50%; padding: 10px; display: inline-flex; align-items: center; justify-content: center; width: 5px; height: 5px;">🖨️</span> マップ印刷（分割印刷A4/A3 最大30×30（900枚））<br> 
     <span style="background-color: gray; border-radius: 50%; padding: 10px; display: inline-flex; align-items: center; justify-content: center; width: 5px; height: 5px;">✏️</span> 線、四角形、多角形、円の描写、テキスト入力<br>
     <span style="background-color: yellow; border-radius: 50%; padding: 10px; display: inline-flex; align-items: center; justify-content: center; width: 5px; height: 5px;">🖼️</span> 任意の画像、イラストの挿入<br>
     【利用規約・ご意見・ご感想・お問い合わせ】<br>
@@ -572,7 +594,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
+  <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.min.js"></script>
   <script>
     const colorMap = {"赤": "red", "青": "blue", "オレンジ": "orange", "ピンク": "deeppink", "緑": "green", "茶": "brown", "黄": "yellow"};
     const shapeMap = {"病院": "star", "診療所": "heart", "歯科": "club", "助産院": "square", "薬局": "spade", "バス停留所": "triangle", "小学校": "star", "中学校": "heart", "高校": "square", "中等教育学校": "circle", "高等専門学校": "circle", "短期大学": "circle", "大学": "circle", "幼稚園": "spade", "特別支援学校": "circle", "幼保連携型認定こども園": "club", "義務教育学校": "circle", "各種学校": "circle", "専修学校": "circle"};
@@ -626,7 +648,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     });
 
     const map = L.map('map', {
-      center: [34.710233985604596, 137.70251668848428],
+      center: [34.977228981910656, 138.38290312275777],
       zoom: 15,
       preferCanvas: true,
       zoomSnap: 0.1,
@@ -3908,12 +3930,39 @@ fetch("geo_22_専修学校.geojson")
     }
 
     function getPrintGrid() {
-        const v = document.getElementById('print-grid-size').value.split('x');
-        return { cols: parseInt(v[0]), rows: parseInt(v[1]) };
+        const rowsInput = document.getElementById('print-grid-rows');
+        const colsInput = document.getElementById('print-grid-cols');
+        const rows = Number(rowsInput.value);
+        const cols = Number(colsInput.value);
+        if (!Number.isInteger(rows) || rows < 1 || rows > 30 ||
+            !Number.isInteger(cols) || cols < 1 || cols > 30) {
+            alert('縦・横の分割数は、それぞれ1～30の整数で入力してください。');
+            return null;
+        }
+        return { cols, rows };
     }
+
+    function updatePrintGridCount() {
+        const rows = Number(document.getElementById('print-grid-rows').value);
+        const cols = Number(document.getElementById('print-grid-cols').value);
+        const label = document.getElementById('print-grid-count');
+        if (Number.isInteger(rows) && rows >= 1 && rows <= 30 &&
+            Number.isInteger(cols) && cols >= 1 && cols <= 30) {
+            const total = rows * cols;
+            label.textContent = `合計：${total}枚`;
+            label.style.color = total >= 50 ? '#c00' : '';
+        } else {
+            label.textContent = '縦・横は1～30の整数で入力してください';
+            label.style.color = '#c00';
+        }
+    }
+    document.getElementById('print-grid-rows').addEventListener('input', updatePrintGridCount);
+    document.getElementById('print-grid-cols').addEventListener('input', updatePrintGridCount);
 
     function showPrintGrid() {
         const overlay = document.getElementById('print-grid-overlay');
+        const grid = getPrintGrid();
+        if (!grid) return;
         const data = getPrintBounds();
 
         overlay.innerHTML = '';
@@ -3993,7 +4042,7 @@ fetch("geo_22_専修学校.geojson")
             `${paperSize}${document.getElementById('print-orientation').value === 'portrait' ? '縦' : '横'}`;
 
         alert(
-            `${orientationText}・${data.cols}×${data.rows} の実際の印刷範囲を表示しました。
+            `${orientationText}・${data.rows}×${data.cols} の実際の印刷範囲を表示しました。
 ` +
             `赤枠は「② 分割印刷ページを作成」と同じ範囲です。`
         );
@@ -4205,6 +4254,19 @@ fetch("geo_22_専修学校.geojson")
     }
 
     async function createPosterPrint() {
+        const grid = getPrintGrid();
+        if (!grid) return;
+        const requestedPages = grid.rows * grid.cols;
+        if (requestedPages >= 50) {
+            const proceed = confirm(
+                `分割数は${grid.rows}×${grid.cols}、合計${requestedPages}枚です。
+` +
+                `50枚以上の場合、地図ページの作成に時間がかかる場合があります。
+` +
+                `続行しますか？`
+            );
+            if (!proceed) return;
+        }
         // 「① 印刷範囲を表示」で表示した境界線は残す。
         // 分割印刷ページの作成時にも、同じ範囲を確認できるようにする。
         const data = getPrintBounds();
@@ -4226,6 +4288,104 @@ fetch("geo_22_専修学校.geojson")
             ? (isPortrait ? 1587 : 1122)
             : (isPortrait ? 1122 : 793);
 
+        // Leafletはdisplay:noneのコンテナでは正しいサイズを取得できないため、
+        // 索引・詳細ページを作成する前にプレビューを表示状態にする。
+        preview.style.display = 'block';
+
+        // =====================================================
+        // 先頭ページ：全体索引（分割区画と詳細ページ番号）
+        // =====================================================
+        const indexPage = document.createElement('div');
+        indexPage.className = 'print-page'
+            + (isPortrait ? ' portrait' : '')
+            + (isA3 ? (isPortrait ? ' a3-portrait' : ' a3-landscape') : '');
+        indexPage.style.aspectRatio = `${pageW}`;
+        const indexTitle = document.createElement('div');
+        indexTitle.className = 'print-page-title';
+        indexTitle.textContent = `索引・全体図 / 詳細地図 ${totalPages}枚`;
+        indexPage.appendChild(indexTitle);
+        const indexMapDiv = document.createElement('div');
+        indexMapDiv.className = 'print-page-map';
+        indexMapDiv.id = 'poster-index-map';
+        indexPage.appendChild(indexMapDiv);
+        inner.appendChild(indexPage);
+
+        const indexMap = L.map(indexMapDiv, {
+            zoomControl: false,
+            attributionControl: false,
+            preferCanvas: true,
+            dragging: false,
+            scrollWheelZoom: false,
+            doubleClickZoom: false,
+            boxZoom: false,
+            keyboard: false,
+            touchZoom: false
+        });
+        indexMap.__printRenderer = L.canvas({ padding: 0.5 });
+        indexMap.createPane('hazardPane');
+        indexMap.getPane('hazardPane').style.zIndex = 300;
+        indexMap.getPane('hazardPane').style.pointerEvents = 'none';
+        addPrintBaseLayer(indexMap);
+
+        const indexSW = map.unproject(data.sw, data.zoom);
+        const indexNE = map.unproject(data.ne, data.zoom);
+        const indexBounds = L.latLngBounds(indexSW, indexNE);
+        indexMap.fitBounds(indexBounds, { padding: [12, 12] });
+
+        // 現在表示中の施設・学校・バス停・境界線を索引にも複製
+        document.querySelectorAll('.facility-toggle:checked,.bus-toggle:checked,.school-toggle:checked,.boundary-toggle:checked').forEach(cb => {
+            const layer = (facilityLayers[cb.value] || boundaryLayers[cb.value]);
+            if (layer) cloneLayerForPrint(layer, indexMap);
+        });
+        // 現在の地図上の描画物、テキスト、画像も索引に複製
+        map.eachLayer(layer => {
+            if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Circle) {
+                if (layer.options?.pane !== 'hazardPane' && layer.options?.pane !== 'boundaryPane') {
+                    try { L.geoJSON(layer.toGeoJSON()).addTo(indexMap); } catch(e) {}
+                }
+            }
+            if (layer instanceof L.Marker) {
+                try {
+                    const el = layer.getElement && layer.getElement();
+                    const isCustomText = !!((el && el.classList && el.classList.contains('custom-text-marker')) || (el && el.querySelector && el.querySelector('.custom-text-marker')) || (layer.options && layer.options.icon && layer.options.icon.options && String(layer.options.icon.options.className || '').includes('custom-text-marker')));
+                    const isCustomImage = !!(el && el.querySelector && el.querySelector('.map-added-image'));
+                    if (isCustomText || isCustomImage) cloneLayerForPrint(layer, indexMap);
+                } catch(e) {}
+            }
+        });
+
+        // 索引の赤い分割線と、詳細ページ番号を表示（左上から右へ、次の段へ）
+        for (let ir = 0; ir < data.rows; ir++) {
+            for (let ic = 0; ic < data.cols; ic++) {
+                const pageNo = ir * data.cols + ic + 1;
+                const px1 = data.sw.x + (data.totalW / data.cols) * ic;
+                const px2 = data.sw.x + (data.totalW / data.cols) * (ic + 1);
+                const py1 = data.sw.y + (data.totalH / data.rows) * ir;
+                const py2 = data.sw.y + (data.totalH / data.rows) * (ir + 1);
+                const cellBounds = L.latLngBounds(
+                    map.unproject(L.point(px2, py2), data.zoom),
+                    map.unproject(L.point(px1, py1), data.zoom)
+                );
+                L.rectangle(cellBounds, {
+                    color: '#d00000',
+                    weight: 2,
+                    opacity: 0.9,
+                    fill: false,
+                    interactive: false
+                }).addTo(indexMap);
+                const label = L.marker(cellBounds.getCenter(), {
+                    interactive: false,
+                    icon: L.divIcon({
+                        className: 'print-index-number',
+                        html: `<span>${pageNo}</span>`,
+                        iconSize: [34, 34],
+                        iconAnchor: [17, 17]
+                    })
+                }).addTo(indexMap);
+            }
+        }
+        printPreviewMaps.push(indexMap);
+
         for(let r=0;r<data.rows;r++){
             for(let c=0;c<data.cols;c++){
                 const pageNo = r*data.cols+c+1;
@@ -4242,7 +4402,7 @@ fetch("geo_22_専修学校.geojson")
                 const mm = String(today.getMonth() + 1).padStart(2, '0');
                 const dd = String(today.getDate()).padStart(2, '0');
                 const formattedDate = `${yyyy}/${mm}/${dd}`;
-                title.textContent=`作成日: ${formattedDate} Page:${pageNo} / ${totalPages}`;
+                title.textContent=`Page:${pageNo} / ${totalPages}`;
                 page.appendChild(title);
                 const mapDiv=document.createElement('div');
                 mapDiv.className='print-page-map';
@@ -4330,12 +4490,20 @@ fetch("geo_22_専修学校.geojson")
             }
         }
 
-        preview.style.display='block';
+        // 表示後、Leafletに実際のページサイズを再取得させる。
         setTimeout(()=>{
-            printPreviewMaps.forEach(m=>m.invalidateSize());
-        },500);
+            printPreviewMaps.forEach(m=>{
+                try { m.invalidateSize(true); } catch(e) {}
+            });
+            // 索引は非表示時に作成しない。表示後に全体範囲へ再フィットさせる。
+            try {
+                indexMap.fitBounds(indexBounds, {padding: [12, 12]});
+            } catch(e) {
+                console.warn('索引地図の範囲調整に失敗', e);
+            }
+        },700);
 
-        alert('印刷用ページを作成しました。\n地図タイルの読み込みが完了するまで少し待ってから、ブラウザの「印刷」を実行してください。\n実際のサイズ（倍率100%）を選択してください。');
+        alert('索引ページ（1ページ目）と分割地図ページを作成しました。\n地図タイルの読み込みが完了するまで少し待ってから、ブラウザの「印刷」を実行してください。\n実際のサイズ（倍率100%）を選択してください。');
     }
 
     function closePrintPreview() {
