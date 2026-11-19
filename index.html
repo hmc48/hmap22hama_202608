@@ -1225,7 +1225,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
         .then(res => res.json())
         .then(data => {
           boundaryLayers[`町丁目境界${idx}`] = L.geoJSON(data, {
-            style: { color: "red", weight: 1, fillOpacity: 0 },
+            style: { color: "red", weight: 1, fillOpacity: 0.03 },
             onEachFeature: (f, l) => {
               const content = `<strong>${f.properties["町丁目名"]}</strong><br>人口：${f.properties["JINKO"] ?? "不明"}`;
               if (!('ontouchstart' in window)) {
@@ -4221,13 +4221,13 @@ fetch("geo_22_専修学校.geojson")
                         pane: 'overlayPane',
                         pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
                             radius: 5,
-                            color: '#3388ff',
+                            color: 'red',
                             weight: 1,
-                            fillColor: '#3388ff',
-                            fillOpacity: 0.7
+                            fillColor: 'red',
+                            fillOpacity: 0
                         }),
                         style: () => ({
-                            color:'#3388ff', weight:1, fillOpacity:0.15
+                            color:'red', weight:1, fillOpacity:0
                         })
                     }).addTo(targetMap);
                 }
