@@ -237,12 +237,30 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
   top: 290px; right: 15px; background:#198754; color:white;
 }
 #print-panel {
-  display:none; position:fixed; top:55px; right:65px; width:260px;
+  display:none; position:fixed; top:55px; right:65px;
+  width:260px; max-width:calc(100vw - 90px);
+  max-height:calc(100vh - 75px); max-height:calc(100dvh - 75px);
+  overflow-y:auto; -webkit-overflow-scrolling:touch;
   background:white; padding:12px; border-radius:8px; z-index:6000;
   box-shadow:0 4px 15px rgba(0,0,0,0.25); font-size:13px;
+  box-sizing:border-box;
 }
 #print-panel select, #print-panel button {
-  width:100%; box-sizing:border-box; padding:7px; margin-top:6px;
+  width:100%; min-height:40px; box-sizing:border-box;
+  padding:7px; margin-top:6px; font-size:16px;
+  touch-action:manipulation;
+}
+#print-panel label { display:block; min-width:0; font-size:13px; }
+#print-panel .print-grid-selects {
+  display:flex; gap:8px; align-items:flex-start; margin-top:6px;
+}
+#print-panel .print-grid-selects label { flex:1; }
+@media (max-width: 700px) {
+  #print-panel {
+    top:55px; right:58px;
+    max-height:calc(100vh - 70px); max-height:calc(100dvh - 70px);
+    padding:10px;
+  }
 }
 #print-grid-overlay {
   display:none; position:fixed; left:0; top:0; width:100vw; height:100vh;
@@ -324,7 +342,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 </style>
 </head>
 <body>
-  <div id="map-title-bar"><span id="main-title">浜松市版</span> <span id="credit-title">© OpenStreetMap</span></div>
+  <div id="map-title-bar"><span id="main-title">静岡県版</span> <span id="credit-title">© OpenStreetMap</span></div>
   <div id="zoom-indicator">Zoom: --</div>
 
   <div id="hazard-legend">
@@ -502,9 +520,13 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
       <option value="A3">A3</option>
     </select>
     <div style="margin-top:8px;">分割数（縦・横それぞれ1～30）</div>
-    <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
-      <label style="flex:1;">縦（行）<input type="number" id="print-grid-rows" value="3" min="1" max="30" step="1" style="width:100%;box-sizing:border-box;padding:7px;"></label>
-      <label style="flex:1;">横（列）<input type="number" id="print-grid-cols" value="3" min="1" max="30" step="1" style="width:100%;box-sizing:border-box;padding:7px;"></label>
+    <div class="print-grid-selects">
+      <label>縦（行）
+        <select id="print-grid-rows"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option></select>
+      </label>
+      <label>横（列）
+        <select id="print-grid-cols"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option></select>
+      </label>
     </div>
     <div id="print-grid-count" style="margin-top:5px; font-weight:bold;">合計：9枚</div>
     <div style="margin-top:8px;">用紙方向</div>
@@ -648,7 +670,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     });
 
     const map = L.map('map', {
-      center: [34.710233985604596, 137.70251668848428],
+      center: [34.977228981910656, 138.38290312275777],
       zoom: 15,
       preferCanvas: true,
       zoomSnap: 0.1,
@@ -3956,8 +3978,9 @@ fetch("geo_22_専修学校.geojson")
             label.style.color = '#c00';
         }
     }
-    document.getElementById('print-grid-rows').addEventListener('input', updatePrintGridCount);
-    document.getElementById('print-grid-cols').addEventListener('input', updatePrintGridCount);
+    document.getElementById('print-grid-rows').addEventListener('change', updatePrintGridCount);
+    document.getElementById('print-grid-cols').addEventListener('change', updatePrintGridCount);
+    updatePrintGridCount();
 
     function showPrintGrid() {
         const overlay = document.getElementById('print-grid-overlay');
