@@ -278,6 +278,22 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
   overflow:auto; padding:20px; box-sizing:border-box;
 }
 #print-preview-inner { display:flex; flex-direction:column; align-items:center; gap:18px; }
+/* 画面表示用の外枠。印刷ページ本体の寸法には影響させない */
+.print-page-wrap {
+  flex:0 0 auto; position:relative; margin:0 auto;
+}
+#print-preview-tools {
+  position:fixed; top:12px; left:50%; transform:translateX(-50%);
+  z-index:11000; display:flex; align-items:center; gap:6px;
+  padding:6px 8px; border-radius:8px; background:rgba(30,30,30,.92);
+  box-shadow:0 2px 8px rgba(0,0,0,.3); white-space:nowrap;
+}
+#print-preview-tools button {
+  min-width:42px; min-height:38px; padding:6px 10px; border:0;
+  border-radius:5px; background:#fff; color:#222; font-size:15px;
+  touch-action:manipulation;
+}
+#print-preview-zoom-label { color:white; font-size:12px; min-width:42px; text-align:center; }
 .print-page {
   width:1122px; height:793px; background:white; position:relative;
   box-sizing:border-box; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.35);
@@ -291,7 +307,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 .print-page.a3-portrait { width:1122px; height:1587px; }
 .print-page-map { position:absolute; left:0; right:0; top:0; bottom:0; }
 .print-close {
-  position:fixed; right:20px; top:15px; z-index:11000; padding:8px 14px;
+  position:fixed; right:20px; top:15px; z-index:11001; padding:8px 14px;
   background:#dc3545; color:white; border:0; border-radius:5px; cursor:pointer;
   font-size:14px;
 }
@@ -315,6 +331,12 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
    box-sizing: border-box;
  }
 .print-help { font-size:11px; color:#555; line-height:1.45; margin-top:6px; }
+@media (max-width: 700px) {
+  #print-preview { padding:64px 8px 18px; -webkit-overflow-scrolling:touch; }
+  #print-preview-tools { top:8px; gap:4px; padding:5px; }
+  #print-preview-tools button { min-width:38px; min-height:38px; padding:5px 8px; }
+  .print-close { top:8px; right:8px; padding:7px 10px; }
+}
 @media print {
   @page A4Landscape { size: A4 landscape; margin: 0; }
   @page A4Portrait { size: A4 portrait; margin: 0; }
@@ -323,8 +345,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
   body > *:not(#print-preview) { display:none !important; }
   #print-preview { display:block !important; position:static; padding:0; background:white; overflow:visible; }
   #print-preview-inner { display:block; }
+  #print-preview-tools { display:none !important; }
+  .print-page-wrap {
+    width:auto !important; height:auto !important; margin:0 !important;
+    transform:none !important; page-break-after:always; break-after:page;
+  }
+  .print-page-wrap:last-child { page-break-after:auto; break-after:auto; }
+  .print-page { transform:none !important; position:relative !important; left:auto !important; top:auto !important; }
   .print-page {
-    width:297mm; height:210mm; margin:0; box-shadow:none; page-break-after:always; page:A4Landscape;
+    width:297mm; height:210mm; margin:0; box-shadow:none; page-break-after:auto; page:A4Landscape;
   }
   .print-page.portrait {
     width:210mm; height:297mm; page:A4Portrait;
@@ -545,6 +574,12 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
   </div>
   <div id="print-grid-overlay"></div>
   <div id="print-preview">
+    <div id="print-preview-tools">
+      <button type="button" onclick="changePrintPreviewZoom(-0.15)" aria-label="縮小">－</button>
+      <span id="print-preview-zoom-label">100%</span>
+      <button type="button" onclick="changePrintPreviewZoom(0.15)" aria-label="拡大">＋</button>
+      <button type="button" onclick="fitPrintPreviewWidth()">幅に合わせる</button>
+    </div>
     <button class="print-close" onclick="closePrintPreview()">閉じる</button>
     <div id="print-preview-inner"></div>
   </div>
@@ -4276,6 +4311,45 @@ fetch("geo_22_専修学校.geojson")
         };
     }
 
+    // 分割印刷プレビューの画面表示倍率。印刷ページの実寸・地図倍率とは別管理。
+    let printPreviewDisplayScale = 1;
+    let printPreviewNativePageWidth = 1122;
+    let printPreviewNativePageHeight = 793;
+
+    function applyPrintPreviewScale() {
+        const inner = document.getElementById('print-preview-inner');
+        if (!inner) return;
+        inner.querySelectorAll('.print-page-wrap').forEach(wrap => {
+            const page = wrap.querySelector('.print-page');
+            if (!page) return;
+            const w = Number(page.dataset.nativeWidth || printPreviewNativePageWidth);
+            const h = Number(page.dataset.nativeHeight || printPreviewNativePageHeight);
+            wrap.style.width = `${w * printPreviewDisplayScale}px`;
+            wrap.style.height = `${h * printPreviewDisplayScale}px`;
+            page.style.transform = `scale(${printPreviewDisplayScale})`;
+            page.style.transformOrigin = 'top left';
+            page.style.position = 'absolute';
+            page.style.left = '0';
+            page.style.top = '0';
+        });
+        const label = document.getElementById('print-preview-zoom-label');
+        if (label) label.textContent = `${Math.round(printPreviewDisplayScale * 100)}%`;
+    }
+
+    function changePrintPreviewZoom(delta) {
+        printPreviewDisplayScale = Math.max(0.2, Math.min(2.5, printPreviewDisplayScale + delta));
+        applyPrintPreviewScale();
+    }
+
+    function fitPrintPreviewWidth() {
+        const preview = document.getElementById('print-preview');
+        if (!preview) return;
+        const available = Math.max(200, preview.clientWidth - 24);
+        printPreviewDisplayScale = Math.min(1, available / printPreviewNativePageWidth);
+        applyPrintPreviewScale();
+        preview.scrollTop = 0;
+    }
+
     async function createPosterPrint() {
         const grid = getPrintGrid();
         if (!grid) return;
@@ -4310,6 +4384,14 @@ fetch("geo_22_専修学校.geojson")
         const pageCssH = isA3
             ? (isPortrait ? 1587 : 1122)
             : (isPortrait ? 1122 : 793);
+        printPreviewNativePageWidth = pageCssW;
+        printPreviewNativePageHeight = pageCssH;
+        // iPhoneなど幅の狭い画面では、最初から用紙全体が見える倍率にする。
+        // PC・iPadでは従来どおり100%表示。
+        const previewAvailableWidth = Math.max(200, window.innerWidth - 24);
+        printPreviewDisplayScale = window.innerWidth <= 700
+            ? Math.min(1, previewAvailableWidth / pageCssW)
+            : 1;
 
         // Leafletはdisplay:noneのコンテナでは正しいサイズを取得できないため、
         // 索引・詳細ページを作成する前にプレビューを表示状態にする。
@@ -4318,10 +4400,14 @@ fetch("geo_22_専修学校.geojson")
         // =====================================================
         // 先頭ページ：全体索引（分割区画と詳細ページ番号）
         // =====================================================
+        const indexWrap = document.createElement('div');
+        indexWrap.className = 'print-page-wrap';
         const indexPage = document.createElement('div');
         indexPage.className = 'print-page'
             + (isPortrait ? ' portrait' : '')
             + (isA3 ? (isPortrait ? ' a3-portrait' : ' a3-landscape') : '');
+        indexPage.dataset.nativeWidth = String(pageCssW);
+        indexPage.dataset.nativeHeight = String(pageCssH);
         indexPage.style.aspectRatio = `${pageW}`;
         const indexTitle = document.createElement('div');
         indexTitle.className = 'print-page-title';
@@ -4331,7 +4417,8 @@ fetch("geo_22_専修学校.geojson")
         indexMapDiv.className = 'print-page-map';
         indexMapDiv.id = 'poster-index-map';
         indexPage.appendChild(indexMapDiv);
-        inner.appendChild(indexPage);
+        indexWrap.appendChild(indexPage);
+        inner.appendChild(indexWrap);
 
         const indexMap = L.map(indexMapDiv, {
             zoomControl: false,
@@ -4412,10 +4499,14 @@ fetch("geo_22_専修学校.geojson")
         for(let r=0;r<data.rows;r++){
             for(let c=0;c<data.cols;c++){
                 const pageNo = r*data.cols+c+1;
+                const pageWrap = document.createElement('div');
+                pageWrap.className = 'print-page-wrap';
                 const page = document.createElement('div');
                 page.className = 'print-page'
                     + (isPortrait ? ' portrait' : '')
                     + (isA3 ? (isPortrait ? ' a3-portrait' : ' a3-landscape') : '');
+                page.dataset.nativeWidth = String(pageCssW);
+                page.dataset.nativeHeight = String(pageCssH);
                 page.style.aspectRatio = `${pageW}`;
                 const title=document.createElement('div');
                 title.className='print-page-title';
@@ -4431,7 +4522,8 @@ fetch("geo_22_専修学校.geojson")
                 mapDiv.className='print-page-map';
                 mapDiv.id=`poster-map-${pageNo}`;
                 page.appendChild(mapDiv);
-                inner.appendChild(page);
+                pageWrap.appendChild(page);
+                inner.appendChild(pageWrap);
 
                 const x1=data.sw.x + (data.totalW/data.cols)*c;
                 const x2=data.sw.x + (data.totalW/data.cols)*(c+1);
@@ -4514,7 +4606,9 @@ fetch("geo_22_専修学校.geojson")
         }
 
         // 表示後、Leafletに実際のページサイズを再取得させる。
+        applyPrintPreviewScale();
         setTimeout(()=>{
+            applyPrintPreviewScale();
             printPreviewMaps.forEach(m=>{
                 try { m.invalidateSize(true); } catch(e) {}
             });
