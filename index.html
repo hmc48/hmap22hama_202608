@@ -267,11 +267,11 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
   z-index:4500; pointer-events:none;
 }
 .print-grid-line {
-  position:absolute; background:#ff0000; opacity:.85;
+  position:absolute; background:#ff1493; opacity:.85;
 }
 .print-grid-label {
-  position:absolute; background:rgba(255,255,255,.9); color:#d00;
-  border:1px solid #d00; padding:2px 5px; font-weight:bold; font-size:12px;
+  position:absolute; background:rgba(255,255,255,.9); color:#c71585;
+  border:1px solid #c71585; padding:2px 5px; font-weight:bold; font-size:12px;
 }
 #print-preview {
   display:none; position:fixed; inset:0; z-index:10000; background:#777;
@@ -315,7 +315,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 .print-index-number {
    background: transparent;
    border: none;
-   color: #c00000;
+   color: #c71585;
    font-weight: bold;
    font-size: 20px;
    text-align: center;
@@ -326,7 +326,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
    min-width: 26px;
    padding: 0 3px;
    background: rgba(255,255,255,.88);
-   border: 1px solid #c00000;
+   border: 1px solid #c71585;
    border-radius: 3px;
    box-sizing: border-box;
  }
@@ -605,7 +605,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     <span style="color:green;">♠</span>薬局
     <span style="color:red;">■</span>助産院
     <span style="color:brown;">●</span>介護
-    <span style="color:orange;">　▲</span>バス停 （OpenStreetMap 2026/09データ）<br>
+    <span style="color:orange;"> ▲</span>バス停 （OpenStreetMap 2026/09データ）<br>
     【学校関係】（国土地理院・国土交通省 2023年度版）<br>
     <span style="color:green;">★</span>小学校
     <span style="color:red;">♥</span>中学校
@@ -4050,9 +4050,9 @@ fetch("geo_22_専修学校.geojson")
         outer.style.top = `${Math.min(swScreen.y, neScreen.y)}px`;
         outer.style.width = `${Math.abs(neScreen.x - swScreen.x)}px`;
         outer.style.height = `${Math.abs(neScreen.y - swScreen.y)}px`;
-        outer.style.border = '3px solid #ff0000';
+        outer.style.border = '3px solid #ff1493';
         outer.style.boxSizing = 'border-box';
-        outer.style.background = 'transparent';
+        outer.style.background = 'rgba(255, 105, 180, 0.15)';
         overlay.appendChild(outer);
 
         const totalW = Math.abs(neScreen.x - swScreen.x);
@@ -4102,7 +4102,7 @@ fetch("geo_22_専修学校.geojson")
         alert(
             `${orientationText}・${data.rows}×${data.cols} の実際の印刷範囲を表示しました。
 ` +
-            `赤枠は「② 分割印刷ページを作成」と同じ範囲です。`
+            `ピンク枠は「② 分割印刷ページを作成」と同じ範囲です。`
         );
     }
 
@@ -4464,7 +4464,7 @@ fetch("geo_22_専修学校.geojson")
             }
         });
 
-        // 索引の赤い分割線と、詳細ページ番号を表示（左上から右へ、次の段へ）
+        // 索引のピンク色の分割枠線・背景色（不透明度指定）と詳細ページ番号を表示
         for (let ir = 0; ir < data.rows; ir++) {
             for (let ic = 0; ic < data.cols; ic++) {
                 const pageNo = ir * data.cols + ic + 1;
@@ -4477,10 +4477,12 @@ fetch("geo_22_専修学校.geojson")
                     map.unproject(L.point(px1, py1), data.zoom)
                 );
                 L.rectangle(cellBounds, {
-                    color: '#d00000',
+                    color: '#ff1493',       // 境界線（ピンク系：DeepPink）
                     weight: 2,
                     opacity: 0.9,
-                    fill: false,
+                    fill: true,             // 背景色の塗りつぶしを有効化
+                    fillColor: '#ff69b4',   // 背景色（ピンク系：HotPink）
+                    fillOpacity: 0.2,       // 背景色の不透明度（0.0〜1.0で調整）
                     interactive: false
                 }).addTo(indexMap);
                 const label = L.marker(cellBounds.getCenter(), {
@@ -4625,7 +4627,7 @@ fetch("geo_22_専修学校.geojson")
 
     function closePrintPreview() {
         // 印刷画面を閉じて元の地図へ戻る際は、
-        // 「① 印刷範囲を表示」で出した赤い境界線も必ず消す。
+        // 「① 印刷範囲を表示」で出した境界線も必ず消す。
         const preview = document.getElementById('print-preview');
         if (preview) preview.style.display='none';
 
