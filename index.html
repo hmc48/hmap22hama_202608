@@ -276,6 +276,9 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 #print-preview {
   display:none; position:fixed; inset:0; z-index:10000; background:#777;
   overflow:auto; padding:20px; box-sizing:border-box;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  overscroll-behavior:contain;
 }
 #print-preview-inner { display:flex; flex-direction:column; align-items:center; gap:18px; }
 /* 画面表示用の外枠。印刷ページ本体の寸法には影響させない */
@@ -1220,12 +1223,22 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
         }
     }    
 
+    // 町丁目境界線の表示色・線の太さ・背景色・背景濃度
+    // 色コードは自由に変更できます。fillOpacity は 0.0～1.0（0.1 = 10%）。
+    const CHOME_BOUNDARY_STYLE = {
+        color: "#ff69b4",       // 境界線：ピンク
+        weight: 1.5,             // 境界線の太さ
+        opacity: 1.0,            // 境界線の不透明度
+        fillColor: "#ff69b4",    // 面の背景色
+        fillOpacity: 0.1         // 面の背景濃度：10%
+    };
+
     function loadChome(idx) {
       fetch(`geo_0_町丁目境界${idx}.geojson`)
         .then(res => res.json())
         .then(data => {
           boundaryLayers[`町丁目境界${idx}`] = L.geoJSON(data, {
-            style: { color: "red", weight: 1, fillOpacity: 0.03 },
+            style: () => Object.assign({}, CHOME_BOUNDARY_STYLE),
             onEachFeature: (f, l) => {
               const content = `<strong>${f.properties["町丁目名"]}</strong><br>人口：${f.properties["JINKO"] ?? "不明"}`;
               if (!('ontouchstart' in window)) {
@@ -1233,8 +1246,11 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
               }
               l.bindPopup(content);
               l.on({
-                mouseover: e => e.target.setStyle({ weight: 3, color: "#ff0000", fillOpacity: 0.15 }),
-                mouseout: e => e.target.setStyle({ weight: 1, color: "red", fillOpacity: 0.03 }),
+                mouseover: e => e.target.setStyle({
+                    color: "#e60073", weight: 2.5,
+                    fillColor: "#ff69b4", fillOpacity: 0.15
+                }),
+                mouseout: e => e.target.setStyle(Object.assign({}, CHOME_BOUNDARY_STYLE))
               });
             }
           });
@@ -4195,13 +4211,21 @@ fetch("geo_22_専修学校.geojson")
                                 return;
                             }
 
-                            if (src instanceof L.Polyline) {
-                                group.addLayer(L.polyline(src.getLatLngs(), Object.assign({}, src.options || {})));
+                            // Polygon は Polyline を継承しているため、必ず Polygon を先に判定する。
+                            // 先に Polyline を判定すると、面の塗りつぶし設定が失われる。
+                            if (src instanceof L.Polygon) {
+                                group.addLayer(L.polygon(
+                                    src.getLatLngs(),
+                                    Object.assign({}, src.options || {})
+                                ));
                                 return;
                             }
 
-                            if (src instanceof L.Polygon) {
-                                group.addLayer(L.polygon(src.getLatLngs(), Object.assign({}, src.options || {})));
+                            if (src instanceof L.Polyline) {
+                                group.addLayer(L.polyline(
+                                    src.getLatLngs(),
+                                    Object.assign({}, src.options || {})
+                                ));
                                 return;
                             }
                         } catch(e) {
@@ -4350,6 +4374,57 @@ fetch("geo_22_専修学校.geojson")
         preview.scrollTop = 0;
     }
 
+    // iPhone用：2本指のピンチ操作をプレビュー倍率に割り当てる。
+    // Safari自身のページ拡大と競合しないよう、2本指操作時だけ標準動作を止める。
+    let printPinchStartDistance = 0;
+    let printPinchStartScale = 1;
+    let printPreviewPinchInstalled = false;
+
+    function enablePrintPreviewPinchZoom() {
+        const preview = document.getElementById('print-preview');
+        if (!preview || printPreviewPinchInstalled) return;
+        printPreviewPinchInstalled = true;
+
+        const distance = (touches) => {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
+
+        preview.addEventListener('touchstart', (e) => {
+            if (e.target.closest && e.target.closest('#print-preview-tools, .print-close')) return;
+            if (e.touches && e.touches.length === 2) {
+                printPinchStartDistance = distance(e.touches);
+                printPinchStartScale = printPreviewDisplayScale;
+            }
+        }, { passive: true });
+
+        preview.addEventListener('touchmove', (e) => {
+            if (!e.touches || e.touches.length !== 2 || !printPinchStartDistance) return;
+            if (e.cancelable) e.preventDefault();
+            const currentDistance = distance(e.touches);
+            const ratio = currentDistance / printPinchStartDistance;
+            printPreviewDisplayScale = Math.max(
+                0.2,
+                Math.min(2.5, printPinchStartScale * ratio)
+            );
+            applyPrintPreviewScale();
+        }, { passive: false });
+
+        const resetPinch = () => {
+            printPinchStartDistance = 0;
+        };
+        preview.addEventListener('touchend', resetPinch, { passive: true });
+        preview.addEventListener('touchcancel', resetPinch, { passive: true });
+
+        // iOS Safari独自のGestureイベントによる画面全体の拡大も抑止
+        ['gesturestart', 'gesturechange', 'gestureend'].forEach(type => {
+            preview.addEventListener(type, e => {
+                if (e.cancelable) e.preventDefault();
+            }, { passive: false });
+        });
+    }
+
     async function createPosterPrint() {
         const grid = getPrintGrid();
         if (!grid) return;
@@ -4396,6 +4471,7 @@ fetch("geo_22_専修学校.geojson")
         // Leafletはdisplay:noneのコンテナでは正しいサイズを取得できないため、
         // 索引・詳細ページを作成する前にプレビューを表示状態にする。
         preview.style.display = 'block';
+        enablePrintPreviewPinchZoom();
 
         // =====================================================
         // 先頭ページ：全体索引（分割区画と詳細ページ番号）
