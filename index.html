@@ -4298,6 +4298,76 @@ fetch("geo_22_専修学校.geojson")
         }
     }
 
+
+    // ユーザーが追加した図形・テキスト・画像を、索引地図と各分割地図へ複製する。
+    // FeatureGroup内の図形も再帰的に取得し、GeoJSON変換による色・線幅の消失を防ぐ。
+    function cloneUserDrawingsForPrint(sourceMap, targetMap) {
+        const visited = new Set();
+        const facilityGroups = Object.values(facilityLayers);
+        const boundaryGroups = Object.values(boundaryLayers);
+
+        const visit = (layer) => {
+            if (!layer || visited.has(layer)) return;
+            visited.add(layer);
+
+            if (isBoundaryLayerChild(layer)) return;
+            if (facilityGroups.includes(layer) || boundaryGroups.includes(layer)) return;
+            if (layer instanceof L.TileLayer) return;
+
+            if (layer.eachLayer && !(layer instanceof L.Marker)) {
+                layer.eachLayer(child => visit(child));
+                return;
+            }
+
+            try {
+                if (layer instanceof L.Circle) {
+                    targetMap.addLayer(L.circle(layer.getLatLng(), Object.assign({}, layer.options || {})));
+                    return;
+                }
+                if (layer instanceof L.Polygon) {
+                    targetMap.addLayer(L.polygon(layer.getLatLngs(), Object.assign({}, layer.options || {})));
+                    return;
+                }
+                if (layer instanceof L.Polyline) {
+                    targetMap.addLayer(L.polyline(layer.getLatLngs(), Object.assign({}, layer.options || {})));
+                    return;
+                }
+                if (layer instanceof L.Marker) {
+                    const icon = layer.getIcon ? layer.getIcon() : null;
+                    const el = layer.getElement ? layer.getElement() : null;
+                    const io = icon ? (icon.options || {}) : {};
+
+                    const isText = !!(layer._mapTextData ||
+                        String(io.className || '').includes('custom-text-marker') ||
+                        (el && el.querySelector && el.querySelector('.custom-text-marker')));
+                    const isImage = !!(layer._mapImageData ||
+                        String(io.className || '').includes('image-marker-container') ||
+                        (el && el.querySelector && el.querySelector('.map-added-image')));
+
+                    if (!isText && !isImage) return;
+                    if (!icon) return;
+
+                    const opts = Object.assign({}, io);
+                    opts.html = io.html || (el ? el.innerHTML : '');
+                    opts.className = io.className || (isText ? 'custom-text-marker' : 'image-marker-container');
+                    opts.iconSize = io.iconSize || [0, 0];
+                    opts.iconAnchor = io.iconAnchor || [0, 0];
+
+                    targetMap.addLayer(L.marker(layer.getLatLng(), {
+                        icon: L.divIcon(opts),
+                        interactive: false,
+                        keyboard: false,
+                        zIndexOffset: layer.options?.zIndexOffset || 0
+                    }));
+                }
+            } catch (e) {
+                console.warn('ユーザー描画物の印刷用複製失敗', e, layer);
+            }
+        };
+
+        sourceMap.eachLayer(layer => visit(layer));
+    }
+
     function addPrintBaseLayer(targetMap) {
         let selected = '標準';
         const checked = document.querySelector('input[name="baseLayer"]:checked');
@@ -4560,25 +4630,8 @@ fetch("geo_22_専修学校.geojson")
             const layer = (facilityLayers[cb.value] || boundaryLayers[cb.value]);
             if (layer) cloneLayerForPrint(layer, indexMap, cb.classList.contains("boundary-toggle") ? CHOME_BOUNDARY_STYLE : null);
         });
-        // 現在の地図上の描画物、テキスト、画像も索引に複製
-        map.eachLayer(layer => {
-            // 町丁目境界は上のboundary-toggle処理で色指定して複製済み。
-            // ここで再度GeoJSON化するとLeaflet既定の青色になるため除外する。
-            if (isBoundaryLayerChild(layer)) return;
-            if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Circle) {
-                if (layer.options?.pane !== 'hazardPane' && layer.options?.pane !== 'boundaryPane') {
-                    try { L.geoJSON(layer.toGeoJSON()).addTo(indexMap); } catch(e) {}
-                }
-            }
-            if (layer instanceof L.Marker) {
-                try {
-                    const el = layer.getElement && layer.getElement();
-                    const isCustomText = !!((el && el.classList && el.classList.contains('custom-text-marker')) || (el && el.querySelector && el.querySelector('.custom-text-marker')) || (layer.options && layer.options.icon && layer.options.icon.options && String(layer.options.icon.options.className || '').includes('custom-text-marker')));
-                    const isCustomImage = !!(el && el.querySelector && el.querySelector('.map-added-image'));
-                    if (isCustomText || isCustomImage) cloneLayerForPrint(layer, indexMap);
-                } catch(e) {}
-            }
-        });
+        // 現在の地図上の図形・テキスト・画像を索引へ複製
+        cloneUserDrawingsForPrint(map, indexMap);
 
         // 索引の赤い分割線と、詳細ページ番号を表示（左上から右へ、次の段へ）
         for (let ir = 0; ir < data.rows; ir++) {
@@ -4692,33 +4745,8 @@ fetch("geo_22_専修学校.geojson")
                     if(layer) cloneLayerForPrint(layer,pm,cb.classList.contains("boundary-toggle") ? CHOME_BOUNDARY_STYLE : null);
                 });
 
-                // 現在地図上の描画物・ユーザー追加テキスト・画像を複製
-                map.eachLayer(layer=>{
-                    // 町丁目境界はboundary-toggle処理で色指定して複製済み。
-                    // 汎用描画物として再複製しない（青色への戻りを防止）。
-                    if (isBoundaryLayerChild(layer)) return;
-                    if(layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Circle){
-                        if(layer.options?.pane !== 'hazardPane' && layer.options?.pane !== 'boundaryPane'){
-                            try { L.geoJSON(layer.toGeoJSON()).addTo(pm); } catch(e){}
-                        }
-                    }
-
-                    // 「Ｔ」で追加したテキスト、および画像ツールで追加したJPG等を
-                    // 印刷用地図にも同じ緯度経度で配置する。
-                    if(layer instanceof L.Marker){
-                        try {
-                            const el = layer.getElement && layer.getElement();
-                            const isCustomText = !!((el && el.classList && el.classList.contains('custom-text-marker')) || (el && el.querySelector && el.querySelector('.custom-text-marker')) || (layer.options && layer.options.icon && layer.options.icon.options && String(layer.options.icon.options.className || '').includes('custom-text-marker')));
-                            const isCustomImage = !!(el && el.querySelector && el.querySelector('.map-added-image'));
-
-                            if(isCustomText || isCustomImage){
-                                cloneLayerForPrint(layer, pm);
-                            }
-                        } catch(e) {
-                            console.warn('テキスト・画像の印刷用複製失敗', e);
-                        }
-                    }
-                });
+                // 現在地図上の図形・ユーザー追加テキスト・画像を複製
+                cloneUserDrawingsForPrint(map, pm);
 
                 printPreviewMaps.push(pm);
             }
