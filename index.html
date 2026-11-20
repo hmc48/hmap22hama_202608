@@ -4127,7 +4127,7 @@ fetch("geo_22_専修学校.geojson")
         if(o) o.style.display='none';
     }
 
-    function cloneLayerForPrint(layer, targetMap) {
+    function cloneLayerForPrint(layer, targetMap, styleOverride = null) {
         try {
             if (layer instanceof L.TileLayer) {
                 return null; // タイルは後で現在の設定から複製
@@ -4216,7 +4216,7 @@ fetch("geo_22_専修学校.geojson")
                             if (src instanceof L.Polygon) {
                                 group.addLayer(L.polygon(
                                     src.getLatLngs(),
-                                    Object.assign({}, src.options || {})
+                                    Object.assign({}, src.options || {}, styleOverride || {})
                                 ));
                                 return;
                             }
@@ -4224,7 +4224,7 @@ fetch("geo_22_専修学校.geojson")
                             if (src instanceof L.Polyline) {
                                 group.addLayer(L.polyline(
                                     src.getLatLngs(),
-                                    Object.assign({}, src.options || {})
+                                    Object.assign({}, src.options || {}, styleOverride || {})
                                 ));
                                 return;
                             }
@@ -4250,9 +4250,10 @@ fetch("geo_22_専修学校.geojson")
                             fillColor: '#3388ff',
                             fillOpacity: 0.7
                         }),
-                        style: () => ({
-                            color:'#3388ff', weight:1, fillOpacity:0.15
-                        })
+                        style: () => Object.assign({
+                            color: '#3388ff', weight: 1, opacity: 1,
+                            fillColor: '#3388ff', fillOpacity: 0.15
+                        }, styleOverride || {})
                     }).addTo(targetMap);
                 }
             }
@@ -4521,7 +4522,7 @@ fetch("geo_22_専修学校.geojson")
         // 現在表示中の施設・学校・バス停・境界線を索引にも複製
         document.querySelectorAll('.facility-toggle:checked,.bus-toggle:checked,.school-toggle:checked,.boundary-toggle:checked').forEach(cb => {
             const layer = (facilityLayers[cb.value] || boundaryLayers[cb.value]);
-            if (layer) cloneLayerForPrint(layer, indexMap);
+            if (layer) cloneLayerForPrint(layer, indexMap, cb.classList.contains("boundary-toggle") ? CHOME_BOUNDARY_STYLE : null);
         });
         // 現在の地図上の描画物、テキスト、画像も索引に複製
         map.eachLayer(layer => {
@@ -4649,7 +4650,7 @@ fetch("geo_22_専修学校.geojson")
                 // 現在ONになっている施設・境界線を複製
                 document.querySelectorAll('.facility-toggle:checked,.bus-toggle:checked,.school-toggle:checked,.boundary-toggle:checked').forEach(cb=>{
                     const layer=(facilityLayers[cb.value]||boundaryLayers[cb.value]);
-                    if(layer) cloneLayerForPrint(layer,pm);
+                    if(layer) cloneLayerForPrint(layer,pm,cb.classList.contains("boundary-toggle") ? CHOME_BOUNDARY_STYLE : null);
                 });
 
                 // 現在地図上の描画物・ユーザー追加テキスト・画像を複製
