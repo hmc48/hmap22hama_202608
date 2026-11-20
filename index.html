@@ -1226,8 +1226,8 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     // 町丁目境界線の表示色・線の太さ・背景色・背景濃度
     // 色コードは自由に変更できます。fillOpacity は 0.0～1.0（0.1 = 10%）。
     const CHOME_BOUNDARY_STYLE = {
-        color: "red",            // 境界線：赤
-        weight: 2.0,             // 境界線の太さ
+        color: "red",            // 境界線：ピンク
+        weight: 2,               // 境界線の太さ
         opacity: 1.0,            // 境界線の不透明度
         fillColor: "#ff69b4",    // 面の背景色
         fillOpacity: 0           // 面の背景濃度：10%
@@ -1237,12 +1237,9 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
       fetch(`geo_0_町丁目境界${idx}.geojson`)
         .then(res => res.json())
         .then(data => {
-          const chomeGroup = L.geoJSON(data, {
+          boundaryLayers[`町丁目境界${idx}`] = L.geoJSON(data, {
             style: () => Object.assign({}, CHOME_BOUNDARY_STYLE),
             onEachFeature: (f, l) => {
-              // LeafletはFeatureGroupの子レイヤーもmap.eachLayer()に登録する。
-              // 印刷時の汎用複製から確実に除外できるよう、個々の境界にも印を付ける。
-              l._isChomeBoundaryLayer = true;
               const content = `<strong>${f.properties["町丁目名"]}</strong><br>人口：${f.properties["JINKO"] ?? "不明"}`;
               if (!('ontouchstart' in window)) {
                 l.bindTooltip(content, { sticky: true, opacity: 0.9, direction: "auto" });
@@ -1257,8 +1254,6 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
               });
             }
           });
-          chomeGroup._isChomeBoundaryLayer = true;
-          boundaryLayers[`町丁目境界${idx}`] = chomeGroup;
         })
         .catch(err => console.error(err));
     }
@@ -4136,27 +4131,12 @@ fetch("geo_22_専修学校.geojson")
     // FeatureGroupの子レイヤーもmap.eachLayer()に現れるため、
     // そのまま汎用描画物として複製するとLeaflet既定の青色で再描画される。
     function isBoundaryLayerChild(candidate) {
-        if (!candidate) return false;
-        if (candidate._isChomeBoundaryLayer) return true;
-
-        // グループ自身・直接の子・入れ子になった子を再帰的に判定する。
-        // Leafletではグループとその子がmap.eachLayer()の双方に現れる場合がある。
         let found = false;
-        const containsBoundary = layer => {
-            if (!layer || found) return;
-            if (layer === candidate || layer._isChomeBoundaryLayer) {
-                found = true;
-                return;
-            }
-            if (layer.eachLayer) {
-                layer.eachLayer(child => {
-                    if (!found) containsBoundary(child);
-                });
-            }
-        };
-
         Object.values(boundaryLayers).forEach(group => {
-            if (!found) containsBoundary(group);
+            if (!group || !group.eachLayer || found) return;
+            group.eachLayer(child => {
+                if (child === candidate) found = true;
+            });
         });
         return found;
     }
@@ -4296,76 +4276,6 @@ fetch("geo_22_専修学校.geojson")
         } catch(e) {
             console.warn('印刷用レイヤー複製失敗', e);
         }
-    }
-
-
-    // ユーザーが追加した図形・テキスト・画像を、索引地図と各分割地図へ複製する。
-    // FeatureGroup内の図形も再帰的に取得し、GeoJSON変換による色・線幅の消失を防ぐ。
-    function cloneUserDrawingsForPrint(sourceMap, targetMap) {
-        const visited = new Set();
-        const facilityGroups = Object.values(facilityLayers);
-        const boundaryGroups = Object.values(boundaryLayers);
-
-        const visit = (layer) => {
-            if (!layer || visited.has(layer)) return;
-            visited.add(layer);
-
-            if (isBoundaryLayerChild(layer)) return;
-            if (facilityGroups.includes(layer) || boundaryGroups.includes(layer)) return;
-            if (layer instanceof L.TileLayer) return;
-
-            if (layer.eachLayer && !(layer instanceof L.Marker)) {
-                layer.eachLayer(child => visit(child));
-                return;
-            }
-
-            try {
-                if (layer instanceof L.Circle) {
-                    targetMap.addLayer(L.circle(layer.getLatLng(), Object.assign({}, layer.options || {})));
-                    return;
-                }
-                if (layer instanceof L.Polygon) {
-                    targetMap.addLayer(L.polygon(layer.getLatLngs(), Object.assign({}, layer.options || {})));
-                    return;
-                }
-                if (layer instanceof L.Polyline) {
-                    targetMap.addLayer(L.polyline(layer.getLatLngs(), Object.assign({}, layer.options || {})));
-                    return;
-                }
-                if (layer instanceof L.Marker) {
-                    const icon = layer.getIcon ? layer.getIcon() : null;
-                    const el = layer.getElement ? layer.getElement() : null;
-                    const io = icon ? (icon.options || {}) : {};
-
-                    const isText = !!(layer._mapTextData ||
-                        String(io.className || '').includes('custom-text-marker') ||
-                        (el && el.querySelector && el.querySelector('.custom-text-marker')));
-                    const isImage = !!(layer._mapImageData ||
-                        String(io.className || '').includes('image-marker-container') ||
-                        (el && el.querySelector && el.querySelector('.map-added-image')));
-
-                    if (!isText && !isImage) return;
-                    if (!icon) return;
-
-                    const opts = Object.assign({}, io);
-                    opts.html = io.html || (el ? el.innerHTML : '');
-                    opts.className = io.className || (isText ? 'custom-text-marker' : 'image-marker-container');
-                    opts.iconSize = io.iconSize || [0, 0];
-                    opts.iconAnchor = io.iconAnchor || [0, 0];
-
-                    targetMap.addLayer(L.marker(layer.getLatLng(), {
-                        icon: L.divIcon(opts),
-                        interactive: false,
-                        keyboard: false,
-                        zIndexOffset: layer.options?.zIndexOffset || 0
-                    }));
-                }
-            } catch (e) {
-                console.warn('ユーザー描画物の印刷用複製失敗', e, layer);
-            }
-        };
-
-        sourceMap.eachLayer(layer => visit(layer));
     }
 
     function addPrintBaseLayer(targetMap) {
@@ -4630,8 +4540,25 @@ fetch("geo_22_専修学校.geojson")
             const layer = (facilityLayers[cb.value] || boundaryLayers[cb.value]);
             if (layer) cloneLayerForPrint(layer, indexMap, cb.classList.contains("boundary-toggle") ? CHOME_BOUNDARY_STYLE : null);
         });
-        // 現在の地図上の図形・テキスト・画像を索引へ複製
-        cloneUserDrawingsForPrint(map, indexMap);
+        // 現在の地図上の描画物、テキスト、画像も索引に複製
+        map.eachLayer(layer => {
+            // 町丁目境界は上のboundary-toggle処理で色指定して複製済み。
+            // ここで再度GeoJSON化するとLeaflet既定の青色になるため除外する。
+            if (isBoundaryLayerChild(layer)) return;
+            if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Circle) {
+                if (layer.options?.pane !== 'hazardPane' && layer.options?.pane !== 'boundaryPane') {
+                    try { L.geoJSON(layer.toGeoJSON()).addTo(indexMap); } catch(e) {}
+                }
+            }
+            if (layer instanceof L.Marker) {
+                try {
+                    const el = layer.getElement && layer.getElement();
+                    const isCustomText = !!((el && el.classList && el.classList.contains('custom-text-marker')) || (el && el.querySelector && el.querySelector('.custom-text-marker')) || (layer.options && layer.options.icon && layer.options.icon.options && String(layer.options.icon.options.className || '').includes('custom-text-marker')));
+                    const isCustomImage = !!(el && el.querySelector && el.querySelector('.map-added-image'));
+                    if (isCustomText || isCustomImage) cloneLayerForPrint(layer, indexMap);
+                } catch(e) {}
+            }
+        });
 
         // 索引の赤い分割線と、詳細ページ番号を表示（左上から右へ、次の段へ）
         for (let ir = 0; ir < data.rows; ir++) {
@@ -4745,8 +4672,33 @@ fetch("geo_22_専修学校.geojson")
                     if(layer) cloneLayerForPrint(layer,pm,cb.classList.contains("boundary-toggle") ? CHOME_BOUNDARY_STYLE : null);
                 });
 
-                // 現在地図上の図形・ユーザー追加テキスト・画像を複製
-                cloneUserDrawingsForPrint(map, pm);
+                // 現在地図上の描画物・ユーザー追加テキスト・画像を複製
+                map.eachLayer(layer=>{
+                    // 町丁目境界はboundary-toggle処理で色指定して複製済み。
+                    // 汎用描画物として再複製しない（青色への戻りを防止）。
+                    if (isBoundaryLayerChild(layer)) return;
+                    if(layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Circle){
+                        if(layer.options?.pane !== 'hazardPane' && layer.options?.pane !== 'boundaryPane'){
+                            try { L.geoJSON(layer.toGeoJSON()).addTo(pm); } catch(e){}
+                        }
+                    }
+
+                    // 「Ｔ」で追加したテキスト、および画像ツールで追加したJPG等を
+                    // 印刷用地図にも同じ緯度経度で配置する。
+                    if(layer instanceof L.Marker){
+                        try {
+                            const el = layer.getElement && layer.getElement();
+                            const isCustomText = !!((el && el.classList && el.classList.contains('custom-text-marker')) || (el && el.querySelector && el.querySelector('.custom-text-marker')) || (layer.options && layer.options.icon && layer.options.icon.options && String(layer.options.icon.options.className || '').includes('custom-text-marker')));
+                            const isCustomImage = !!(el && el.querySelector && el.querySelector('.map-added-image'));
+
+                            if(isCustomText || isCustomImage){
+                                cloneLayerForPrint(layer, pm);
+                            }
+                        } catch(e) {
+                            console.warn('テキスト・画像の印刷用複製失敗', e);
+                        }
+                    }
+                });
 
                 printPreviewMaps.push(pm);
             }
