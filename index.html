@@ -1227,19 +1227,22 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     // 色コードは自由に変更できます。fillOpacity は 0.0～1.0（0.1 = 10%）。
     const CHOME_BOUNDARY_STYLE = {
         color: "red",            // 境界線：赤
-        weight: 2.5,             // 境界線の太さ
+        weight: 2.0,             // 境界線の太さ
         opacity: 1.0,            // 境界線の不透明度
         fillColor: "#ff69b4",    // 面の背景色
-        fillOpacity: 0           // 面の背景濃度：0%
+        fillOpacity: 0           // 面の背景濃度：10%
     };
 
     function loadChome(idx) {
       fetch(`geo_0_町丁目境界${idx}.geojson`)
         .then(res => res.json())
         .then(data => {
-          boundaryLayers[`町丁目境界${idx}`] = L.geoJSON(data, {
+          const chomeGroup = L.geoJSON(data, {
             style: () => Object.assign({}, CHOME_BOUNDARY_STYLE),
             onEachFeature: (f, l) => {
+              // LeafletはFeatureGroupの子レイヤーもmap.eachLayer()に登録する。
+              // 印刷時の汎用複製から確実に除外できるよう、個々の境界にも印を付ける。
+              l._isChomeBoundaryLayer = true;
               const content = `<strong>${f.properties["町丁目名"]}</strong><br>人口：${f.properties["JINKO"] ?? "不明"}`;
               if (!('ontouchstart' in window)) {
                 l.bindTooltip(content, { sticky: true, opacity: 0.9, direction: "auto" });
@@ -1254,6 +1257,8 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
               });
             }
           });
+          chomeGroup._isChomeBoundaryLayer = true;
+          boundaryLayers[`町丁目境界${idx}`] = chomeGroup;
         })
         .catch(err => console.error(err));
     }
@@ -4131,12 +4136,27 @@ fetch("geo_22_専修学校.geojson")
     // FeatureGroupの子レイヤーもmap.eachLayer()に現れるため、
     // そのまま汎用描画物として複製するとLeaflet既定の青色で再描画される。
     function isBoundaryLayerChild(candidate) {
+        if (!candidate) return false;
+        if (candidate._isChomeBoundaryLayer) return true;
+
+        // グループ自身・直接の子・入れ子になった子を再帰的に判定する。
+        // Leafletではグループとその子がmap.eachLayer()の双方に現れる場合がある。
         let found = false;
+        const containsBoundary = layer => {
+            if (!layer || found) return;
+            if (layer === candidate || layer._isChomeBoundaryLayer) {
+                found = true;
+                return;
+            }
+            if (layer.eachLayer) {
+                layer.eachLayer(child => {
+                    if (!found) containsBoundary(child);
+                });
+            }
+        };
+
         Object.values(boundaryLayers).forEach(group => {
-            if (!group || !group.eachLayer || found) return;
-            group.eachLayer(child => {
-                if (child === candidate) found = true;
-            });
+            if (!found) containsBoundary(group);
         });
         return found;
     }
