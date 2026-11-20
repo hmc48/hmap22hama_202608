@@ -4127,6 +4127,20 @@ fetch("geo_22_専修学校.geojson")
         if(o) o.style.display='none';
     }
 
+    // 町丁目境界レイヤーの子ポリゴンかどうかを判定する。
+    // FeatureGroupの子レイヤーもmap.eachLayer()に現れるため、
+    // そのまま汎用描画物として複製するとLeaflet既定の青色で再描画される。
+    function isBoundaryLayerChild(candidate) {
+        let found = false;
+        Object.values(boundaryLayers).forEach(group => {
+            if (!group || !group.eachLayer || found) return;
+            group.eachLayer(child => {
+                if (child === candidate) found = true;
+            });
+        });
+        return found;
+    }
+
     function cloneLayerForPrint(layer, targetMap, styleOverride = null) {
         try {
             if (layer instanceof L.TileLayer) {
@@ -4235,6 +4249,8 @@ fetch("geo_22_専修学校.geojson")
                 }
 
                 if (group.getLayers().length) {
+                    // 境界レイヤーの場合は、複製した全ポリゴンへ色設定を最後に再適用。
+                    if (styleOverride && group.setStyle) group.setStyle(styleOverride);
                     return group.addTo(targetMap);
                 }
 
@@ -4245,14 +4261,14 @@ fetch("geo_22_専修学校.geojson")
                         pane: 'overlayPane',
                         pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
                             radius: 5,
-                            color: '#3388ff',
-                            weight: 1,
-                            fillColor: '#3388ff',
-                            fillOpacity: 0.7
+                            color: '#ff69b4',
+                            weight: 1.5,
+                            fillColor: '#ff69b4',
+                            fillOpacity: 0.1
                         }),
                         style: () => Object.assign({
-                            color: '#3388ff', weight: 1, opacity: 1,
-                            fillColor: '#3388ff', fillOpacity: 0.15
+                            color: '#ff69b4', weight: 1.5, opacity: 1,
+                            fillColor: '#ff69b4', fillOpacity: 0.1
                         }, styleOverride || {})
                     }).addTo(targetMap);
                 }
@@ -4526,6 +4542,9 @@ fetch("geo_22_専修学校.geojson")
         });
         // 現在の地図上の描画物、テキスト、画像も索引に複製
         map.eachLayer(layer => {
+            // 町丁目境界は上のboundary-toggle処理で色指定して複製済み。
+            // ここで再度GeoJSON化するとLeaflet既定の青色になるため除外する。
+            if (isBoundaryLayerChild(layer)) return;
             if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Circle) {
                 if (layer.options?.pane !== 'hazardPane' && layer.options?.pane !== 'boundaryPane') {
                     try { L.geoJSON(layer.toGeoJSON()).addTo(indexMap); } catch(e) {}
@@ -4655,6 +4674,9 @@ fetch("geo_22_専修学校.geojson")
 
                 // 現在地図上の描画物・ユーザー追加テキスト・画像を複製
                 map.eachLayer(layer=>{
+                    // 町丁目境界はboundary-toggle処理で色指定して複製済み。
+                    // 汎用描画物として再複製しない（青色への戻りを防止）。
+                    if (isBoundaryLayerChild(layer)) return;
                     if(layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Circle){
                         if(layer.options?.pane !== 'hazardPane' && layer.options?.pane !== 'boundaryPane'){
                             try { L.geoJSON(layer.toGeoJSON()).addTo(pm); } catch(e){}
