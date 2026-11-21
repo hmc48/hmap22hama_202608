@@ -4155,8 +4155,9 @@ fetch("geo_22_専修学校.geojson")
                 const isCustomText = !!((el && el.classList && el.classList.contains('custom-text-marker')) || (el && el.querySelector && el.querySelector('.custom-text-marker')) || (layer.options && layer.options.icon && layer.options.icon.options && String(layer.options.icon.options.className || '').includes('custom-text-marker')));
                 const isCustomImage = !!(el && el.querySelector && el.querySelector('.map-added-image'));
 
+                const icon = layer.getIcon ? layer.getIcon() : null;
+
                 if (isCustomText || isCustomImage) {
-                    const icon = layer.getIcon ? layer.getIcon() : null;
                     if (!icon) return null;
 
                     const opts = Object.assign({}, icon.options || {});
@@ -4167,13 +4168,28 @@ fetch("geo_22_専修学校.geojson")
                     opts.iconSize = icon.options?.iconSize || [0, 0];
                     opts.iconAnchor = icon.options?.iconAnchor || [0, 0];
 
-                    const copy = L.marker(layer.getLatLng(), {
+                    return L.marker(layer.getLatLng(), {
                         icon: L.divIcon(opts),
                         interactive: false,
                         keyboard: false
                     }).addTo(targetMap);
+                }
 
-                    return copy;
+                // Geomanの「図形描写」から追加されたピン型Markerも印刷対象にする。
+                // 病院等のCustomMarkerや画像・テキストMarkerとは別の通常Marker。
+                if (layer.pm && icon) {
+                    const opts = Object.assign({}, icon.options || {});
+                    const printIcon = icon instanceof L.DivIcon
+                        ? L.divIcon(opts)
+                        : L.icon(opts);
+
+                    return L.marker(layer.getLatLng(), {
+                        icon: printIcon,
+                        opacity: layer.options?.opacity ?? 1,
+                        zIndexOffset: layer.options?.zIndexOffset ?? 0,
+                        interactive: false,
+                        keyboard: false
+                    }).addTo(targetMap);
                 }
 
                 return null;
@@ -4215,9 +4231,13 @@ fetch("geo_22_専修学校.geojson")
                                 const icon = src.getIcon ? src.getIcon() : null;
                                 if (icon) {
                                     const o = Object.assign({}, icon.options || {});
-                                    o.html = icon.options?.html || '';
+                                    const copiedIcon = icon instanceof L.DivIcon
+                                        ? L.divIcon(o)
+                                        : L.icon(o);
                                     group.addLayer(L.marker(ll, {
-                                        icon: L.divIcon(o),
+                                        icon: copiedIcon,
+                                        opacity: src.options?.opacity ?? 1,
+                                        zIndexOffset: src.options?.zIndexOffset ?? 0,
                                         interactive: false,
                                         keyboard: false
                                     }));
@@ -4555,7 +4575,7 @@ fetch("geo_22_専修学校.geojson")
                     const el = layer.getElement && layer.getElement();
                     const isCustomText = !!((el && el.classList && el.classList.contains('custom-text-marker')) || (el && el.querySelector && el.querySelector('.custom-text-marker')) || (layer.options && layer.options.icon && layer.options.icon.options && String(layer.options.icon.options.className || '').includes('custom-text-marker')));
                     const isCustomImage = !!(el && el.querySelector && el.querySelector('.map-added-image'));
-                    if (isCustomText || isCustomImage) cloneLayerForPrint(layer, indexMap);
+                    if (isCustomText || isCustomImage || layer.pm) cloneLayerForPrint(layer, indexMap);
                 } catch(e) {}
             }
         });
@@ -4691,7 +4711,7 @@ fetch("geo_22_専修学校.geojson")
                             const isCustomText = !!((el && el.classList && el.classList.contains('custom-text-marker')) || (el && el.querySelector && el.querySelector('.custom-text-marker')) || (layer.options && layer.options.icon && layer.options.icon.options && String(layer.options.icon.options.className || '').includes('custom-text-marker')));
                             const isCustomImage = !!(el && el.querySelector && el.querySelector('.map-added-image'));
 
-                            if(isCustomText || isCustomImage){
+                            if(isCustomText || isCustomImage || layer.pm){
                                 cloneLayerForPrint(layer, pm);
                             }
                         } catch(e) {
