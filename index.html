@@ -4184,9 +4184,11 @@ fetch("geo_22_専修学校.geojson")
                     }).addTo(targetMap);
                 }
 
-                // Geomanの「図形描写」から追加されたピン型Markerも印刷対象にする。
-                // 病院等のCustomMarkerや画像・テキストMarkerとは別の通常Marker。
-                if ((layer._isUserDrawingMarker || layer.pm) && icon) {
+                // 図形描写グループのピン型Markerを印刷用地図へ複製する。
+                // Geomanのバージョンや生成方法によって _isUserDrawingMarker / layer.pm
+                // が付かない場合があるため、印刷対象として呼び出された通常Markerは
+                // アイコン情報をそのまま複製する。経路検索用Markerは除外する。
+                if (icon && !(Array.isArray(routeMarkers) && routeMarkers.includes(layer))) {
                     const opts = Object.assign({}, icon.options || {});
                     const printIcon = icon instanceof L.DivIcon
                         ? L.divIcon(opts)
@@ -4196,6 +4198,7 @@ fetch("geo_22_専修学校.geojson")
                         icon: printIcon,
                         opacity: layer.options?.opacity ?? 1,
                         zIndexOffset: layer.options?.zIndexOffset ?? 0,
+                        draggable: false,
                         interactive: false,
                         keyboard: false
                     }).addTo(targetMap);
@@ -4584,7 +4587,7 @@ fetch("geo_22_専修学校.geojson")
                     const el = layer.getElement && layer.getElement();
                     const isCustomText = !!((el && el.classList && el.classList.contains('custom-text-marker')) || (el && el.querySelector && el.querySelector('.custom-text-marker')) || (layer.options && layer.options.icon && layer.options.icon.options && String(layer.options.icon.options.className || '').includes('custom-text-marker')));
                     const isCustomImage = !!(el && el.querySelector && el.querySelector('.map-added-image'));
-                    if (isCustomText || isCustomImage || layer._isUserDrawingMarker || layer.pm) cloneLayerForPrint(layer, indexMap);
+                    if (isCustomText || isCustomImage || !routeMarkers.includes(layer)) cloneLayerForPrint(layer, indexMap);
                 } catch(e) {}
             }
         });
@@ -4720,7 +4723,7 @@ fetch("geo_22_専修学校.geojson")
                             const isCustomText = !!((el && el.classList && el.classList.contains('custom-text-marker')) || (el && el.querySelector && el.querySelector('.custom-text-marker')) || (layer.options && layer.options.icon && layer.options.icon.options && String(layer.options.icon.options.className || '').includes('custom-text-marker')));
                             const isCustomImage = !!(el && el.querySelector && el.querySelector('.map-added-image'));
 
-                            if(isCustomText || isCustomImage || layer._isUserDrawingMarker || layer.pm){
+                            if(isCustomText || isCustomImage || !routeMarkers.includes(layer)){
                                 cloneLayerForPrint(layer, pm);
                             }
                         } catch(e) {
