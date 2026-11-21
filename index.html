@@ -738,6 +738,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     map.pm.addControls({ position: 'topright' });
     map.pm.removeControls();
 
+    // Geomanの「マーカー描写」で作成されたレイヤーを明示的に識別する。
+    // Leaflet-Geomanのバージョン等によって layer.pm が付かない場合があるため、
+    // layer.pm の有無だけに依存しない。
+    map.on('pm:create', function(e) {
+        if (e && e.layer instanceof L.Marker) {
+            e.layer._isUserDrawingMarker = true;
+        }
+    });
+
     let currentSelectedColor = "#3388ff";
     let isTextMode = false;
     let isRouteMode = false;
@@ -4177,7 +4186,7 @@ fetch("geo_22_専修学校.geojson")
 
                 // Geomanの「図形描写」から追加されたピン型Markerも印刷対象にする。
                 // 病院等のCustomMarkerや画像・テキストMarkerとは別の通常Marker。
-                if (layer.pm && icon) {
+                if ((layer._isUserDrawingMarker || layer.pm) && icon) {
                     const opts = Object.assign({}, icon.options || {});
                     const printIcon = icon instanceof L.DivIcon
                         ? L.divIcon(opts)
@@ -4575,7 +4584,7 @@ fetch("geo_22_専修学校.geojson")
                     const el = layer.getElement && layer.getElement();
                     const isCustomText = !!((el && el.classList && el.classList.contains('custom-text-marker')) || (el && el.querySelector && el.querySelector('.custom-text-marker')) || (layer.options && layer.options.icon && layer.options.icon.options && String(layer.options.icon.options.className || '').includes('custom-text-marker')));
                     const isCustomImage = !!(el && el.querySelector && el.querySelector('.map-added-image'));
-                    if (isCustomText || isCustomImage || layer.pm) cloneLayerForPrint(layer, indexMap);
+                    if (isCustomText || isCustomImage || layer._isUserDrawingMarker || layer.pm) cloneLayerForPrint(layer, indexMap);
                 } catch(e) {}
             }
         });
@@ -4711,7 +4720,7 @@ fetch("geo_22_専修学校.geojson")
                             const isCustomText = !!((el && el.classList && el.classList.contains('custom-text-marker')) || (el && el.querySelector && el.querySelector('.custom-text-marker')) || (layer.options && layer.options.icon && layer.options.icon.options && String(layer.options.icon.options.className || '').includes('custom-text-marker')));
                             const isCustomImage = !!(el && el.querySelector && el.querySelector('.map-added-image'));
 
-                            if(isCustomText || isCustomImage || layer.pm){
+                            if(isCustomText || isCustomImage || layer._isUserDrawingMarker || layer.pm){
                                 cloneLayerForPrint(layer, pm);
                             }
                         } catch(e) {
