@@ -608,7 +608,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     <span style="color:green;">♠</span>薬局
     <span style="color:red;">■</span>助産院
     <span style="color:brown;">●</span>介護
-    <span style="color:orange;">　▲</span>バス停 （OpenStreetMap 2026/09データ）<br>
+    <span style="color:orange;"> ▲</span>バス停 （OpenStreetMap 2026/09データ）<br>
     【学校関係】（国土地理院・国土交通省 2023年度版）<br>
     <span style="color:green;">★</span>小学校
     <span style="color:red;">♥</span>中学校
@@ -4185,14 +4185,31 @@ fetch("geo_22_専修学校.geojson")
                 }
 
                 // 図形描写グループのピン型Markerを印刷用地図へ複製する。
-                // Geomanのバージョンや生成方法によって _isUserDrawingMarker / layer.pm
-                // が付かない場合があるため、印刷対象として呼び出された通常Markerは
-                // アイコン情報をそのまま複製する。経路検索用Markerは除外する。
+                // 経路検索用Markerは除外し、標準ピンアイコンやDivIconの情報を明示的に引き継ぐ。
                 if (icon && !(Array.isArray(routeMarkers) && routeMarkers.includes(layer))) {
-                    const opts = Object.assign({}, icon.options || {});
-                    const printIcon = icon instanceof L.DivIcon
-                        ? L.divIcon(opts)
-                        : L.icon(opts);
+                    let printIcon;
+                    if (icon instanceof L.DivIcon) {
+                        const opts = Object.assign({}, icon.options || {});
+                        opts.html = icon.options?.html || (el ? el.innerHTML : '');
+                        printIcon = L.divIcon(opts);
+                    } else {
+                        const srcOpts = icon.options || {};
+                        const defaultIcon = new L.Icon.Default();
+                        const resolvedIconUrl = srcOpts.iconUrl || defaultIcon.options.iconUrl;
+                        const resolvedRetinaUrl = srcOpts.iconRetinaUrl || defaultIcon.options.iconRetinaUrl;
+                        const resolvedShadowUrl = srcOpts.shadowUrl || defaultIcon.options.shadowUrl;
+
+                        printIcon = L.icon({
+                            iconUrl: resolvedIconUrl,
+                            iconRetinaUrl: resolvedRetinaUrl,
+                            shadowUrl: resolvedShadowUrl,
+                            iconSize: srcOpts.iconSize || defaultIcon.options.iconSize,
+                            iconAnchor: srcOpts.iconAnchor || defaultIcon.options.iconAnchor,
+                            popupAnchor: srcOpts.popupAnchor || defaultIcon.options.popupAnchor,
+                            shadowSize: srcOpts.shadowSize || defaultIcon.options.shadowSize,
+                            className: srcOpts.className || ''
+                        });
+                    }
 
                     return L.marker(layer.getLatLng(), {
                         icon: printIcon,
