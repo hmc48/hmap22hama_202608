@@ -4184,32 +4184,21 @@ fetch("geo_22_専修学校.geojson")
                     }).addTo(targetMap);
                 }
 
-                // 図形描写グループのピン型Markerを印刷用地図へ複製する。
-                // 経路検索用Markerは除外し、標準ピンアイコンやDivIconの情報を明示的に引き継ぐ。
-                if (icon && !(Array.isArray(routeMarkers) && routeMarkers.includes(layer))) {
-                    let printIcon;
-                    if (icon instanceof L.DivIcon) {
-                        const opts = Object.assign({}, icon.options || {});
-                        opts.html = icon.options?.html || (el ? el.innerHTML : '');
-                        printIcon = L.divIcon(opts);
-                    } else {
-                        const srcOpts = icon.options || {};
-                        const defaultIcon = new L.Icon.Default();
-                        const resolvedIconUrl = srcOpts.iconUrl || defaultIcon.options.iconUrl;
-                        const resolvedRetinaUrl = srcOpts.iconRetinaUrl || defaultIcon.options.iconRetinaUrl;
-                        const resolvedShadowUrl = srcOpts.shadowUrl || defaultIcon.options.shadowUrl;
+                // 経路検索用Markerは除外し、図形描写のピン型Markerは標準ピンアイコンで複製する
+                if (!(Array.isArray(routeMarkers) && routeMarkers.includes(layer))) {
+                    const defaultIcon = new L.Icon.Default();
+                    const srcOpts = (icon && !(icon instanceof L.DivIcon) && icon.options) ? icon.options : {};
 
-                        printIcon = L.icon({
-                            iconUrl: resolvedIconUrl,
-                            iconRetinaUrl: resolvedRetinaUrl,
-                            shadowUrl: resolvedShadowUrl,
-                            iconSize: srcOpts.iconSize || defaultIcon.options.iconSize,
-                            iconAnchor: srcOpts.iconAnchor || defaultIcon.options.iconAnchor,
-                            popupAnchor: srcOpts.popupAnchor || defaultIcon.options.popupAnchor,
-                            shadowSize: srcOpts.shadowSize || defaultIcon.options.shadowSize,
-                            className: srcOpts.className || ''
-                        });
-                    }
+                    const printIcon = L.icon({
+                        iconUrl: srcOpts.iconUrl || defaultIcon.options.iconUrl,
+                        iconRetinaUrl: srcOpts.iconRetinaUrl || defaultIcon.options.iconRetinaUrl,
+                        shadowUrl: srcOpts.shadowUrl || defaultIcon.options.shadowUrl,
+                        iconSize: srcOpts.iconSize || defaultIcon.options.iconSize,
+                        iconAnchor: srcOpts.iconAnchor || defaultIcon.options.iconAnchor,
+                        popupAnchor: srcOpts.popupAnchor || defaultIcon.options.popupAnchor,
+                        shadowSize: srcOpts.shadowSize || defaultIcon.options.shadowSize,
+                        className: 'leaflet-marker-icon'
+                    });
 
                     return L.marker(layer.getLatLng(), {
                         icon: printIcon,
@@ -4592,7 +4581,7 @@ fetch("geo_22_専修学校.geojson")
         // 現在の地図上の描画物、テキスト、画像も索引に複製
         map.eachLayer(layer => {
             // 町丁目境界は上のboundary-toggle処理で色指定して複製済み。
-            // ここで再度GeoJSON化するとLeaflet既定の青色になるため除外する。
+            // 汎用描画物として再複製しない（青色への戻りを防止）。
             if (isBoundaryLayerChild(layer)) return;
             if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Circle) {
                 if (layer.options?.pane !== 'hazardPane' && layer.options?.pane !== 'boundaryPane') {
