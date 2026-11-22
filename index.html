@@ -353,7 +353,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     width:auto !important; height:auto !important; margin:0 !important;
     transform:none !important; page-break-after:always; break-after:page;
   }
-  .print-page-wrap:last-child { page-break-after:auto; break-after:auto; }
+  .print-page-wrap:last-child { page-break-after:auto; break-after:page; }
   .print-page { transform:none !important; position:relative !important; left:auto !important; top:auto !important; }
   .print-page {
     width:297mm; height:210mm; margin:0; box-shadow:none; page-break-after:auto; page:A4Landscape;
@@ -3914,6 +3914,16 @@ fetch("geo_22_専修学校.geojson")
     // ==========================================================
     let printPreviewMaps = [];
 
+    function getCurrentMapKindCreditText() {
+        const creditEl = document.getElementById('credit-title');
+        const domText = (creditEl ? creditEl.textContent : '').trim();
+        if (domText) return domText;
+
+        const checked = document.querySelector('input[name="baseLayer"]:checked');
+        const layerKey = checked ? checked.value : '標準';
+        return creditText[layerKey] || '© OpenStreetMap';
+    }
+
     function togglePrintPanel() {
         const p = document.getElementById('print-panel');
         p.style.display = (p.style.display === 'block') ? 'none' : 'block';
@@ -4070,8 +4080,6 @@ fetch("geo_22_専修学校.geojson")
     }
 
     function cloneStandaloneCustomMarkers(targetMap) {
-        // 検索結果から単体でmapに追加されたL.CustomMarkerを収集して複製する
-        // （チェックボックスONでグループごと複製されるものと重複しないよう管理）
         const seenLatLngKeys = new Set();
         const renderer = targetMap.__printRenderer || L.canvas({ padding: 0.5 });
         if (renderer._layers) {
@@ -4418,6 +4426,7 @@ fetch("geo_22_専修学校.geojson")
             if (!proceed) return;
         }
         const data = getPrintBounds();
+        const mapKindCredit = getCurrentMapKindCreditText();
         const preview = document.getElementById('print-preview');
         const inner = document.getElementById('print-preview-inner');
         inner.innerHTML = '';
@@ -4458,7 +4467,7 @@ fetch("geo_22_専修学校.geojson")
         indexPage.style.aspectRatio = `${pageW}`;
         const indexTitle = document.createElement('div');
         indexTitle.className = 'print-page-title';
-        indexTitle.textContent = `索引・全体図 / 詳細地図 ${totalPages}枚`;
+        indexTitle.textContent = `索引・全体図 / 詳細地図 ${totalPages}枚 ${mapKindCredit}`;
         indexPage.appendChild(indexTitle);
         const indexMapDiv = document.createElement('div');
         indexMapDiv.className = 'print-page-map';
@@ -4557,7 +4566,7 @@ fetch("geo_22_専修学校.geojson")
                 page.style.aspectRatio = `${pageW}`;
                 const title=document.createElement('div');
                 title.className='print-page-title';
-                title.textContent=`Page:${pageNo} / ${totalPages}`;
+                title.textContent=`Page:${pageNo} / ${totalPages} ${mapKindCredit}`;
                 page.appendChild(title);
                 const mapDiv=document.createElement('div');
                 mapDiv.className='print-page-map';
