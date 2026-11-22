@@ -4103,6 +4103,22 @@ fetch("geo_22_専修学校.geojson")
         });
     }
 
+    function cloneDrawnShapeToPrintMap(layer, targetMap) {
+        if (layer instanceof L.Circle) {
+            const opts = Object.assign({}, layer.options || {}, {
+                radius: layer.getRadius()
+            });
+            delete opts.renderer;
+            L.circle(layer.getLatLng(), opts).addTo(targetMap);
+            return;
+        }
+        if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
+            if (layer.options?.pane !== 'hazardPane' && layer.options?.pane !== 'boundaryPane') {
+                try { L.geoJSON(layer.toGeoJSON()).addTo(targetMap); } catch(e) {}
+            }
+        }
+    }
+
     function cloneLayerForPrint(layer, targetMap, styleOverride = null) {
         try {
             if (layer instanceof L.TileLayer) {
@@ -4180,6 +4196,15 @@ fetch("geo_22_専修学校.geojson")
                                     });
                                 }
                                 group.addLayer(copy);
+                                return;
+                            }
+
+                            if (ll && src instanceof L.Circle) {
+                                const o = Object.assign({}, src.options || {}, {
+                                    radius: src.getRadius()
+                                });
+                                delete o.renderer;
+                                group.addLayer(L.circle(ll, o));
                                 return;
                             }
 
@@ -4506,11 +4531,7 @@ fetch("geo_22_専修学校.geojson")
 
         map.eachLayer(layer => {
             if (isBoundaryLayerChild(layer)) return;
-            if (layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Circle) {
-                if (layer.options?.pane !== 'hazardPane' && layer.options?.pane !== 'boundaryPane') {
-                    try { L.geoJSON(layer.toGeoJSON()).addTo(indexMap); } catch(e) {}
-                }
-            }
+            cloneDrawnShapeToPrintMap(layer, indexMap);
             if (layer instanceof L.Marker) {
                 try {
                     const el = layer.getElement && layer.getElement();
@@ -4619,11 +4640,7 @@ fetch("geo_22_専修学校.geojson")
 
                 map.eachLayer(layer=>{
                     if (isBoundaryLayerChild(layer)) return;
-                    if(layer instanceof L.Polyline || layer instanceof L.Polygon || layer instanceof L.Circle){
-                        if(layer.options?.pane !== 'hazardPane' && layer.options?.pane !== 'boundaryPane'){
-                            try { L.geoJSON(layer.toGeoJSON()).addTo(pm); } catch(e){}
-                        }
-                    }
+                    cloneDrawnShapeToPrintMap(layer, pm);
 
                     if(layer instanceof L.Marker){
                         try {
